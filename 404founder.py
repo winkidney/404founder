@@ -1,13 +1,14 @@
 # coding: utf-8
 import logging
-from threading import Thread
+from threading import Thread, Event
 import requests
 import urlparse
 from pyquery import PyQuery as PQ
-from Queue import Queue, Empty
+from Queue import Queue
 import time
 from requests.exceptions import InvalidSchema
 import sys
+import thread
 
 __author__ = 'winkidney'
 
@@ -54,6 +55,9 @@ class ContentGetter(Thread):
                 content, mimetype = result
                 target_obj.parse_queue.put((path, mimetype, content))
         print "getter exit!"
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        logging.info("Thread %s exit!" % self.ident)
 
 
 class Founder(object):
@@ -119,8 +123,8 @@ class Founder(object):
         self.log.close()
         self.parser_log.close()
 
-        logging.warn("All task done, program will now exit.")
-        logging.info("\nView log file %s %s" % (self.log.name, self.parser_log.name))
+        logging.info("All task done, program will now exit.")
+        logging.info("\nView log file `%s`, `%s`" % (self.log.name, self.parser_log.name))
 
     def find_url(self, current_path, html_content):
 
@@ -180,9 +184,9 @@ class Founder(object):
                 logging.info("URL Returns 200: %s", url)
                 return response.content, response.headers['content-type']
             else:
-                info = "URL Returns None 200: %s" % (url, )
-                self.write_log(info)
-                logging.warn(info)
+                warning = "URL Returns %s: %s" % (response.status_code, url)
+                self.write_log(warning)
+                logging.warn(warning)
         except requests.HTTPError:
             logging.error("URL meet HTTPError: %s" % (url, ))
         except InvalidSchema:
